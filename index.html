@@ -148,8 +148,6 @@
       for (const [x, y] of flips) {
         currentBoard[x][y] = currentTurn;
       }
-      renderBoard()
-
       await updateGame();
       await fetchGame();
     }
@@ -207,7 +205,7 @@
     fetchGame();
 
     // 定期更新
-    setInterval(fetchGame, 600);
+    setInterval(fetchGame, 500);
   </script>
 </body>
 </html>
