@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Othello Game with Baserow</title>
+  <title>othello</title>
   <style>
     #board {
       display: grid;
@@ -28,12 +28,11 @@
   </style>
 </head>
 <body>
-  <h2>オンラインオセロ</h2>
-  <button onclick="resetGame()">🔄 リセット</button>
+  <h2>Othello</h2>
+  <button onclick="resetGame()">リセット</button>
   <div id="turnInfo"></div>
   <div id="winnerInfo"></div>
   <div id="board"></div>
-
   <script>
     const API_URL = 'https://api.baserow.io/api/database/rows/table/505424/';
     const API_TOKEN = 'Zah39yt4kGeZuHj79hrQMaxNdLkyDULI';
