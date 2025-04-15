@@ -138,7 +138,7 @@
     }
 
     async function handleClick(i, j) {
-      if (gameOver) return; // ゲーム終了後はクリックできない
+      if (gameOver) return;
 
       const flips = getFlippableDiscs(currentBoard, i, j, currentTurn);
       if (flips.length === 0) return;
@@ -188,7 +188,7 @@
       newBoard[4][3] = 'B';
       newBoard[4][4] = 'W';
 
-      await fetch(`${API_URL}${GAME_ID}/`, {
+      await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Token ${API_TOKEN}`,
