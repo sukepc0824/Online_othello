@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <title>Othello Game with Baserow</title>
   <style>
@@ -10,7 +9,6 @@
       grid-template-rows: repeat(8, 40px);
       gap: 2px;
     }
-
     .cell {
       width: 40px;
       height: 40px;
@@ -20,28 +18,20 @@
       justify-content: center;
       cursor: pointer;
     }
-
-    .black,
-    .white {
+    .black, .white {
       width: 30px;
       height: 30px;
       border-radius: 50%;
     }
-
-    .black {
-      background: black;
-    }
-
-    .white {
-      background: white;
-    }
+    .black { background: black; }
+    .white { background: white; }
   </style>
 </head>
-
 <body>
   <h2>オンラインオセロ</h2>
   <button onclick="resetGame()">🔄 リセット</button>
   <div id="turnInfo"></div>
+  <div id="winnerInfo"></div>
   <div id="board"></div>
 
   <script>
@@ -51,6 +41,7 @@
 
     let currentBoard = [];
     let currentTurn = 'B';
+    let gameOver = false;
 
     const directions = [
       [-1, 0], [1, 0], [0, -1], [0, 1],
@@ -96,7 +87,9 @@
       const data = await res.json();
       currentBoard = JSON.parse(data.board);
       currentTurn = data.current_turn;
+      gameOver = data.game_over || false;
       renderBoard();
+      checkWinner();
     }
 
     async function updateGame() {
@@ -108,7 +101,8 @@
         },
         body: JSON.stringify({
           board: JSON.stringify(currentBoard),
-          current_turn: getOpponent(currentTurn)
+          current_turn: getOpponent(currentTurn),
+          game_over: gameOver
         })
       });
     }
@@ -117,6 +111,12 @@
       const board = document.getElementById('board');
       board.innerHTML = '';
       document.getElementById('turnInfo').innerText = `現在のターン：${currentTurn === 'B' ? '●' : '○'}`;
+
+      if (gameOver) {
+        document.getElementById('winnerInfo').innerText = `勝者は ${currentTurn === 'B' ? '●' : '○'} です。`;
+      } else {
+        document.getElementById('winnerInfo').innerText = '';
+      }
 
       for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
@@ -139,10 +139,13 @@
     }
 
     async function handleClick(i, j) {
+      if (gameOver) return; // ゲーム終了後はクリックできない
+
       const flips = getFlippableDiscs(currentBoard, i, j, currentTurn);
       if (flips.length === 0) return;
 
       currentBoard[i][j] = currentTurn;
+      
       for (const [x, y] of flips) {
         currentBoard[x][y] = currentTurn;
       }
@@ -151,21 +154,33 @@
       await fetchGame();
     }
 
-    function initBoardIfNeeded() {
-      if (!currentBoard || currentBoard.length !== 8) {
-        currentBoard = Array(8).fill(null).map(() => Array(8).fill(""));
-        currentBoard[3][3] = 'W';
-        currentBoard[3][4] = 'B';
-        currentBoard[4][3] = 'B';
-        currentBoard[4][4] = 'W';
+    function checkWinner() {
+      const blackCount = currentBoard.flat().filter(cell => cell === 'B').length;
+      const whiteCount = currentBoard.flat().filter(cell => cell === 'W').length;
+
+      if (blackCount + whiteCount === 64 || blackCount === 0 || whiteCount === 0) {
+        gameOver = true;
+        if (blackCount > whiteCount) {
+          document.getElementById('winnerInfo').innerText = '黒（●）の勝利！';
+        } else if (whiteCount > blackCount) {
+          document.getElementById('winnerInfo').innerText = '白（○）の勝利！';
+        } else {
+          document.getElementById('winnerInfo').innerText = '引き分け！';
+        }
+        updateGame();
       }
     }
 
-    // 初期読み込み
-    fetchGame();
-
-    // 定期更新
-    setInterval(fetchGame, 600);
+    async function passTurn() {
+      const opponent = getOpponent(currentTurn);
+      const canMove = currentBoard.some((row, x) => row.some((cell, y) => getFlippableDiscs(currentBoard, x, y, currentTurn).length > 0));
+      
+      if (!canMove) {
+        currentTurn = opponent;
+        await updateGame();
+        await fetchGame();
+      }
+    }
 
     async function resetGame() {
       const newBoard = Array(8).fill(null).map(() => Array(8).fill(""));
@@ -174,7 +189,7 @@
       newBoard[4][3] = 'B';
       newBoard[4][4] = 'W';
 
-      await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
+      await fetch(`${API_URL}${GAME_ID}/`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Token ${API_TOKEN}`,
@@ -182,14 +197,17 @@
         },
         body: JSON.stringify({
           board: JSON.stringify(newBoard),
-          current_turn: "B"
+          current_turn: "B",
+          game_over: false
         })
       });
 
       await fetchGame();
     }
+    fetchGame();
 
+    // 定期更新
+    setInterval(fetchGame, 600);
   </script>
 </body>
-
 </html>
