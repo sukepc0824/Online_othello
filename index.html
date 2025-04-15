@@ -131,7 +131,7 @@
             cell.appendChild(disc);
           }
 
-          cell.onPointerdown = () => handleClick(i, j);
+          cell.onmousedown = () => handleClick(i, j);
           board.appendChild(cell);
         }
       }
