@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <title>Simple Othello with Baserow</title>
+  <title>Othello Game with Baserow</title>
   <style>
     #board {
       display: grid;
@@ -9,6 +10,7 @@
       grid-template-rows: repeat(8, 40px);
       gap: 2px;
     }
+
     .cell {
       width: 40px;
       height: 40px;
@@ -18,40 +20,87 @@
       justify-content: center;
       cursor: pointer;
     }
-    .black { background-color: black; border-radius: 50%; width: 30px; height: 30px; }
-    .white { background-color: white; border-radius: 50%; width: 30px; height: 30px; }
+
+    .black,
+    .white {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+    }
+
+    .black {
+      background: black;
+    }
+
+    .white {
+      background: white;
+    }
   </style>
 </head>
+
 <body>
-  <h2>Simple Othello</h2>
+  <h2>オンラインオセロ</h2>
+  <button onclick="resetGame()">🔄 リセット</button>
   <div id="turnInfo"></div>
   <div id="board"></div>
 
   <script>
     const API_URL = 'https://api.baserow.io/api/database/rows/table/505424/';
-    const API_TOKEN = 'Zah39yt4kGeZuHj79hrQMaxNdLkyDULI'; // BaserowのAPIトークン
-    const GAME_ID = 1; // ゲームID（手動で設定）
+    const API_TOKEN = 'Zah39yt4kGeZuHj79hrQMaxNdLkyDULI'; // ← ここにあなたのAPIトークンを入れてください
+    const GAME_ID = 1;
 
     let currentBoard = [];
     let currentTurn = 'B';
 
-    // ゲームデータを取得する
-    async function fetchGame() {
-      const res = await fetch(`${API_URL}${GAME_ID}/`, {
-        headers: {
-          'Authorization': `Token ${API_TOKEN}`
+    const directions = [
+      [-1, 0], [1, 0], [0, -1], [0, 1],
+      [-1, -1], [-1, 1], [1, -1], [1, 1]
+    ];
+
+    function insideBoard(x, y) {
+      return x >= 0 && x < 8 && y >= 0 && y < 8;
+    }
+
+    function getOpponent(turn) {
+      return turn === 'B' ? 'W' : 'B';
+    }
+
+    function getFlippableDiscs(board, x, y, player) {
+      if (board[x][y] !== "") return [];
+
+      const opponent = getOpponent(player);
+      const flippable = [];
+
+      for (let [dx, dy] of directions) {
+        let nx = x + dx, ny = y + dy;
+        const temp = [];
+
+        while (insideBoard(nx, ny) && board[nx][ny] === opponent) {
+          temp.push([nx, ny]);
+          nx += dx;
+          ny += dy;
         }
+
+        if (insideBoard(nx, ny) && board[nx][ny] === player && temp.length > 0) {
+          flippable.push(...temp);
+        }
+      }
+
+      return flippable;
+    }
+
+    async function fetchGame() {
+      const res = await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
+        headers: { 'Authorization': `Token ${API_TOKEN}` }
       });
       const data = await res.json();
       currentBoard = JSON.parse(data.board);
       currentTurn = data.current_turn;
       renderBoard();
-      document.getElementById('turnInfo').innerText = `Current turn: ${currentTurn === 'B' ? 'Black' : 'White'}`;
     }
 
-    // ゲームデータを更新する
     async function updateGame() {
-      await fetch(`${API_URL}${GAME_ID}/`, {
+      await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Token ${API_TOKEN}`,
@@ -59,55 +108,88 @@
         },
         body: JSON.stringify({
           board: JSON.stringify(currentBoard),
-          current_turn: currentTurn === 'B' ? 'W' : 'B'
+          current_turn: getOpponent(currentTurn)
         })
       });
     }
 
-    // ボードを描画
     function renderBoard() {
       const board = document.getElementById('board');
       board.innerHTML = '';
+      document.getElementById('turnInfo').innerText = `現在のターン：${currentTurn === 'B' ? '●' : '○'}`;
+
       for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
           const cell = document.createElement('div');
           cell.className = 'cell';
-          const piece = currentBoard[i][j];
-          if (piece === 'B') cell.innerHTML = '<div class="black"></div>';
-          if (piece === 'W') cell.innerHTML = '<div class="white"></div>';
-          cell.onclick = () => handleMove(i, j);
+          if (currentBoard[i][j] === 'B') {
+            const disc = document.createElement('div');
+            disc.className = 'black';
+            cell.appendChild(disc);
+          } else if (currentBoard[i][j] === 'W') {
+            const disc = document.createElement('div');
+            disc.className = 'white';
+            cell.appendChild(disc);
+          }
+
+          cell.onclick = () => handleClick(i, j);
           board.appendChild(cell);
         }
       }
     }
 
-    // ユーザーの移動を処理する
-    function isValidMove(row, col) {
-      return currentBoard[row][col] === '';
-    }
+    async function handleClick(i, j) {
+      const flips = getFlippableDiscs(currentBoard, i, j, currentTurn);
+      if (flips.length === 0) return;
 
-    async function handleMove(row, col) {
-      if (!isValidMove(row, col)) return;
-      currentBoard[row][col] = currentTurn;
+      currentBoard[i][j] = currentTurn;
+      for (const [x, y] of flips) {
+        currentBoard[x][y] = currentTurn;
+      }
+
       await updateGame();
-      await fetchGame(); // 再描画
+      await fetchGame();
     }
 
-    // 初期ボード設定
-    function initBoard() {
-      const board = Array(8).fill(null).map(() => Array(8).fill(''));
-      board[3][3] = 'W';
-      board[3][4] = 'B';
-      board[4][3] = 'B';
-      board[4][4] = 'W';
-      return board;
+    function initBoardIfNeeded() {
+      if (!currentBoard || currentBoard.length !== 8) {
+        currentBoard = Array(8).fill(null).map(() => Array(8).fill(""));
+        currentBoard[3][3] = 'W';
+        currentBoard[3][4] = 'B';
+        currentBoard[4][3] = 'B';
+        currentBoard[4][4] = 'W';
+      }
     }
 
-    // 初回読み込み
+    // 初期読み込み
     fetchGame();
 
-    // 5秒ごとにゲーム状態を更新
-    setInterval(fetchGame, 5000);
+    // 定期更新
+    setInterval(fetchGame, 2000);
+
+    async function resetGame() {
+      const newBoard = Array(8).fill(null).map(() => Array(8).fill(""));
+      newBoard[3][3] = 'W';
+      newBoard[3][4] = 'B';
+      newBoard[4][3] = 'B';
+      newBoard[4][4] = 'W';
+
+      await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Token ${API_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          board: JSON.stringify(newBoard),
+          current_turn: "B"
+        })
+      });
+
+      await fetchGame(); // 即時反映
+    }
+
   </script>
 </body>
+
 </html>
