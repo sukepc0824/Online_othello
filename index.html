@@ -165,7 +165,7 @@
     fetchGame();
 
     // 定期更新
-    setInterval(fetchGame, 100);
+    setInterval(fetchGame, 1000);
 
     async function resetGame() {
       const newBoard = Array(8).fill(null).map(() => Array(8).fill(""));
