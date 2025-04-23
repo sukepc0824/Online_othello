@@ -181,12 +181,11 @@
       }
     }
 
-function pass(){
+async function pass(){
 let t = "";
 if (currentTurn === "W"){
 t = "B"
-
-}else{
+} else {
 t = "W"
 }
       await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
