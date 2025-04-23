@@ -30,6 +30,7 @@
 <body>
   <h2>Othello</h2>
   <button onclick="resetGame()">リセット</button>
+  <button onclick="pass()">パス</button>
   <div id="turnInfo"></div>
   <div id="winnerInfo"></div>
   <div id="board"></div>
@@ -179,6 +180,28 @@
         await fetchGame();
       }
     }
+
+function pass(){
+let t = "";
+if (currentTurn === "W"){
+t = "B"
+
+}else{
+t = "W"
+}
+      await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Token ${API_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          board: JSON.stringify(currentBoard),
+          current_turn: t,
+          game_over: gameOver
+        })
+      });
+}
 
     async function resetGame() {
       const newBoard = Array(8).fill(null).map(() => Array(8).fill(""));
