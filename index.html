@@ -203,28 +203,28 @@ t = "W"
 }
 
     async function resetGame() {
-      const newBoard = Array(8).fill(null).map(() => Array(8).fill(""));
-      newBoard[3][3] = 'W';
-      newBoard[3][4] = 'B';
-      newBoard[4][3] = 'B';
-      newBoard[4][4] = 'W';
+  const newBoard = Array(8).fill(null).map(() => Array(8).fill(""));
+  newBoard[3][3] = 'W';
+  newBoard[3][4] = 'B';
+  newBoard[4][3] = 'B';
+  newBoard[4][4] = 'W';
 
-      await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Token ${API_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          board: JSON.stringify(newBoard),
-          current_turn: "B",
-          game_over: false
-        })
-      });
+  await fetch(`${API_URL}${GAME_ID}/?user_field_names=true`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Token ${API_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      board: JSON.stringify(newBoard),
+      current_turn: "B",
+      game_over: false
+    })
+  });
 
-      await fetchGame();
+  // 少し待ってからfetchGame()を実行（APIが更新されるまで待つ）
+  setTimeout(fetchGame, 300);
     }
-    fetchGame();
 
     // 定期更新
     setInterval(fetchGame, 500);
